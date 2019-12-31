@@ -18,8 +18,26 @@ Contact Info: xtopher.brandt at gmail
 */
 
 'use strict';
-
+ 
 const functions = require('firebase-functions');
-const app = require( './app.js' );
+const express = require('express');
+const cors = require('cors');
 
-exports.winescraper = functions.https.onRequest(app);
+const app = express();
+
+// Automatically allow cross-origin requests
+app.use(cors({ origin: true }));
+
+// Add middleware to authenticate requests
+//app.use(myMiddleware);
+
+// build multiple CRUD interfaces:
+//app.get('/:id', (req, res) => res.send(Widgets.getById(req.params.id)));
+app.get('/', (req, res) => res.send(startSearch( req.query.labelInfo )));
+
+function startSearch( queryString ){
+    return { labelInfo: queryString };
+}
+
+// Expose Express API as a single Cloud Function:
+module.exports = app;
