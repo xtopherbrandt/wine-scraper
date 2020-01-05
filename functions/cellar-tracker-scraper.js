@@ -41,7 +41,7 @@ module.exports = class CellarTrackerScraper {
 
         jsDomPromise.then( dom => this.mapEachResult( dom, cookieJar ) ).catch(err => {
             if ( err.statusCode === 403 ){
-                console.log( 'CAUGHT!' );
+                console.log( 'Cellar Tracker returned a 403 from search.' );
                 this.resolve( [] );
             }
             else{
@@ -81,15 +81,15 @@ module.exports = class CellarTrackerScraper {
         
         console.log( `Wine uri: ${getUri}`);
 
-        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "dangerously" });
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "outside-only" });
 
         return jsDomPromise.then( dom => this.scrapeWineDetail( dom ) ).catch(err => {
             if ( err.statusCode === 403 ){
-                console.log( 'CAUGHT!' );
+                console.log( 'Cellar tracker returned a 403 from wine detail' );
                 this.resolve( [] );
             }
             else{
-                console.log('Error scraping cellar tracker', err );
+                console.log('Error scraping wine detail from cellar tracker', err );
                 this.reject( );
             }
             
@@ -198,7 +198,6 @@ module.exports = class CellarTrackerScraper {
 
     getAveragePrice( $ ){
         var priceText = $("#where_to_buy_container > div.col_1of2 > a > div.price").text();
-        console.log ( `Price: ${priceText}`);
         return priceText.replace(/\s/g,'');
     }
 
