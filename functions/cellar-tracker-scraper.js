@@ -23,7 +23,6 @@ Contact Info: xtopher.brandt at gmail
 const jsdom = require( 'jsdom' );
 const { JSDOM } = jsdom;
 const Label = require('./label.js');
-const notify = require('./notifications' );
 
 module.exports = class CellarTrackerScraper {
 
@@ -32,17 +31,17 @@ module.exports = class CellarTrackerScraper {
     }
     
     wineLabelQuery( queryString ){
+        const cookieJar = new jsdom.CookieJar();
 
         var getUri = `${this.url}?szSearch=${queryString}`;
         
         console.log( `Cellar-Tracker uri: ${getUri}`);
 
-        var jsDompromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)' });
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "dangerously" });
 
-        jsDompromise.then( dom => this.queryPromiseFulfilled( dom ) ).catch(err => {
-            if ( err.statusCode == 403 ){
+        jsDomPromise.then( dom => this.mapEachResult( dom, cookieJar ) ).catch(err => {
+            if ( err.statusCode === 403 ){
                 console.log( 'CAUGHT!' );
-                notify.testNotification();
                 this.resolve( [] );
             }
             else{
@@ -50,10 +49,46 @@ module.exports = class CellarTrackerScraper {
                 this.reject( );
             }
             
-        });;
+        });
 
         return new Promise((resolve, reject) => {this.resolve = resolve; this.reject = reject;} );
 
+    }
+    
+    getWineLabelDetail( getUri, cookieJar ){
+        
+        console.log( `Wine uri: ${getUri}`);
+
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "dangerously" });
+
+        jsDomPromise.then( dom => this.queryPromiseFulfilled( dom, cookieJar ) ).catch(err => {
+            if ( err.statusCode === 403 ){
+                console.log( 'CAUGHT!' );
+                this.resolve( [] );
+            }
+            else{
+                console.log('Error scraping cellar tracker', err );
+                this.reject( );
+            }
+            
+        });
+
+        return new Promise((resolve, reject) => {this.resolve = resolve; this.reject = reject;} );
+
+    }
+
+    mapEachResult( dom, cookieJar ){
+        const { window } = dom.window;
+        const $ = require( 'jquery' )(window);
+
+        console.log( cookieJar.toJSON() );
+
+        var results = this.getSearchResults( $ );
+        results.map((index, link) => {
+            this.getWineLabelDetail( link, cookieJar );
+        });
+
+        this.resolve(dom.window.document.body.innerHTML );
     }
 
     queryPromiseFulfilled( dom ) { 
@@ -62,6 +97,8 @@ module.exports = class CellarTrackerScraper {
         var wine = {};
         wine.varietal = this.getGrape( $ );
         wine.producer = this.getProducer( $ );
+
+        console.log( wine );
 
         wine.locale = this.getRegion( $ );
         wine.locale.appellation = this.getAppellation( $ );
@@ -88,12 +125,21 @@ module.exports = class CellarTrackerScraper {
         this.resolve( [this.label] );
     }
 
+    getSearchResults( $ ){
+        return $("a.more");
+    }
+
+    getSearchResultURI( $ ){
+        return $("a.more").attr("href");
+    }
+
+
     getProducer( $ ){        
         return $("span.icon-producer" ).next().children("a").text();
     }
 
     getGrape( $ ){
-        return $("span.icon-grape" ).next().children("a").text();
+        return $("span.el.var" ).first().text();
     }
 
     getAppellation( $ ){

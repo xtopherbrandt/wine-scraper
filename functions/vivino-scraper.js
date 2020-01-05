@@ -24,27 +24,27 @@ const jsdom = require( 'jsdom' );
 const { JSDOM } = jsdom;
 const Label = require('./label.js');
 
-module.exports = class WineSearcherScraper {
+module.exports = class VivinoScraper {
 
     constructor ( ){
-        this.url = 'https://www.wine-searcher.com/find/';
+        this.url = 'https://www.vivino.com/search/wines';
     }
     
     wineLabelQuery( queryString ){
 
-        var getUri = `${this.url}${queryString}`;
+        var getUri = `${this.url}?q=${queryString}`;
         
-        console.log( `Wine-Searcher uri: ${getUri}`);
+        console.log( `Vivno uri: ${getUri}`);
 
-        var jsDompromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)' });
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)' });
 
-        jsDompromise.then( dom => this.queryPromiseFulfilled( dom ) ).catch(err => {
+        jsDomPromise.then( dom => this.mapEachResult( dom ) ).catch(err => {
             if ( err.statusCode === 403 ){
                 console.log( 'CAUGHT!' );
                 this.resolve( [] );
             }
             else{
-                console.log('Error scraping wine searcher', err );
+                console.log('Error scraping cellar tracker', err );
                 this.reject( );
             }
             
@@ -54,12 +54,24 @@ module.exports = class WineSearcherScraper {
 
     }
 
+    mapEachResult( dom ){
+        const { window } = dom.window;
+        const $ = require( 'jquery' )(window);
+
+        var results = this.getSearchResults( $ );
+        console.log( results );
+
+        this.resolve([]);
+    }
+
     queryPromiseFulfilled( dom ) { 
         const { window } = dom.window;
         const $ = require( 'jquery' )(window);
         var wine = {};
         wine.varietal = this.getGrape( $ );
         wine.producer = this.getProducer( $ );
+
+        console.log( wine );
 
         wine.locale = this.getRegion( $ );
         wine.locale.appellation = this.getAppellation( $ );
@@ -83,21 +95,24 @@ module.exports = class WineSearcherScraper {
             this.label = new Label();
         }
     
-        if ( this.label.isValid() ){
-            this.resolve( [this.label] );
-        }
-        else{
-            this.resolve( [] );
-        }
-        
+        this.resolve( [this.label] );
     }
+
+    getSearchResults( $ ){
+        return $("#wrapper" );
+    }
+
+    getSearchResultURI( result ){
+        return $("a.more").attr("href");
+    }
+
 
     getProducer( $ ){        
         return $("span.icon-producer" ).next().children("a").text();
     }
 
     getGrape( $ ){
-        return $("span.icon-grape" ).next().children("a").text();
+        return $("span.el.var" ).first().text();
     }
 
     getAppellation( $ ){
@@ -154,7 +169,7 @@ module.exports = class WineSearcherScraper {
     separateRegion( regionSelector ){
         var splitRegion = {};
         var regionParts = regionSelector.text().split( ",");
-
+        console.log( regionParts );
         var index = regionParts.length - 1;
 
         splitRegion.country = regionParts[ index-- ];

@@ -22,6 +22,9 @@ Contact Info: xtopher.brandt at gmail
 const functions = require('firebase-functions');
 const express = require('express');
 const cors = require('cors');
+const WineSearcherScraper = require('./wine-searcher-scraper');
+const CellarTrackerScraper = require('./cellar-tracker-scraper');
+const VivinoScraper = require('./vivino-scraper');
 
 const app = express();
 
@@ -33,11 +36,114 @@ app.use(cors({ origin: true }));
 
 // build multiple CRUD interfaces:
 //app.get('/:id', (req, res) => res.send(Widgets.getById(req.params.id)));
-app.get('/', (req, res) => res.send(startSearch( req.query.labelInfo )));
+app.get('/', (req, res) => getFromCellarTracker( req, res ));
 
-function startSearch( queryString ){
-    return { labelInfo: queryString };
+function getFromWineSearcher( req, res ){
+
+    var vintage = getVintage( req );
+    var bottleName = req.query.bottleName;
+
+    startWineSearcherQuery( vintage, bottleName ).then( labels => {
+        console.log( `   Found ${labels.length} labels`);
+        var responseText = `Found ${labels.length} labels`
+        res.send( labels );
+        return responseText;
+    },reason => {
+        console.log ( `Look up failed` );
+        console.log( reason );
+        var responseText = `Sorry, I couldn't find any information on a ${labelQuery}`
+        res.send( responseText );
+    }).catch( error => {
+        console.log ( `Look up error` );
+        console.log( error );
+        var responseText = `Sorry, I couldn't find any information on a ${labelQuery}`
+        res.send( responseText );
+    });
 }
 
+function getVintage( req ){
+    if ( req.query.vintage ){
+        return req.query.vintage;
+    }
+    else{
+        return '';
+    }
+}
+
+function startWineSearcherQuery( vintage, bottleName ){
+    var wineSearcherScraper = new WineSearcherScraper();
+    var labelQuery = `${vintage} ${bottleName}`;
+   
+    console.log( `Looking up: ${labelQuery}` );
+
+    return wineSearcherScraper.wineLabelQuery( labelQuery );
+
+}
+
+function getFromCellarTracker( req, res ){
+
+    var vintage = getVintage( req );
+    var bottleName = req.query.bottleName;
+
+    startCellarTrackerQuery( vintage, bottleName ).then( labels => {
+        console.log( `   Found ${labels.length} labels`);
+        var responseText = `Found ${labels.length} labels`
+        res.send( labels );
+        return responseText;
+    },reason => {
+        console.log ( `Look up failed` );
+        console.log( reason );
+        var responseText = `Sorry, I couldn't find any information on a ${vintage} ${bottleName}`
+        res.send( responseText );
+    }).catch( error => {
+        console.log ( `Look up error` );
+        console.log( error );
+        var responseText = `Sorry, I couldn't find any information on a ${vintage} ${bottleName}`
+        res.send( responseText );
+    });
+}
+
+function startCellarTrackerQuery( vintage, bottleName ){
+    var cellarTrackerScraper = new CellarTrackerScraper();
+    var labelQuery = `${vintage} ${bottleName}`;
+   
+    console.log( `Looking up: ${labelQuery}` );
+
+    return cellarTrackerScraper.wineLabelQuery( labelQuery );
+
+}
+
+function getFromVivino( req, res ){
+
+    var vintage = getVintage( req );
+    var bottleName = req.query.bottleName;
+
+    startVivinoQuery( vintage, bottleName ).then( labels => {
+        console.log( `   Found ${labels.length} labels`);
+        var responseText = `Found ${labels.length} labels`
+        res.send( labels );
+        return responseText;
+    },reason => {
+        console.log ( `Look up failed` );
+        console.log( reason );
+        var responseText = `Sorry, I couldn't find any information on a ${labelQuery}`
+        res.send( responseText );
+    }).catch( error => {
+        console.log ( `Look up error` );
+        console.log( error );
+        var responseText = `Sorry, I couldn't find any information on a ${labelQuery}`
+        res.send( responseText );
+    });
+}
+
+function startVivinoQuery( vintage, bottleName ){
+    var vivinoScraper = new VivinoScraper();
+    var labelQuery = `${vintage} ${bottleName}`;
+   
+    console.log( `Looking up: ${labelQuery}` );
+
+    return vivinoScraper.wineLabelQuery( labelQuery );
+
+}
 // Expose Express API as a single Cloud Function:
 module.exports = app;

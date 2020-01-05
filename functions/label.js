@@ -20,7 +20,7 @@ Contact Info: xtopher.brandt at gmail
 'use strict';
 
 const uuidv4 = require('uuid/v4');
-const ResponseFormatter = require( './responseFormatter');
+//const ResponseFormatter = require( './responseFormatter');
 
 module.exports = class Label {
     constructor( vintage, blend, producer, labelName, proprietaryName, imageUrl, country, region, subRegion, appellation, key, style, averagePrice, criticsScore, communityScore, foodPairing ){
@@ -81,7 +81,7 @@ module.exports = class Label {
     getLabelCardSubtitle( ){
         return `${this.blend}`;
     }
-    
+/**    
     getFormattedText( ){
 
         var formattedText = '';
@@ -290,7 +290,7 @@ module.exports = class Label {
 
         return ratingOutput;
     }
-
+*/
     toJSON(){
         if ( !this.key ){
             this.key = uuidv4();
