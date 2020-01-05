@@ -23,7 +23,7 @@ const uuidv4 = require('uuid/v4');
 //const ResponseFormatter = require( './responseFormatter');
 
 module.exports = class Label {
-    constructor( vintage, blend, producer, labelName, proprietaryName, imageUrl, country, region, subRegion, appellation, key, style, averagePrice, criticsScore, communityScore, foodPairing ){
+    constructor( vintage, blend, producer, labelName, proprietaryName, imageUrl, country, region, subRegion, appellation, key, style, averagePrice, criticsScore, communityScore, foodPairing, sourceName, sourceID ){
         this.key = key
         this.vintage = vintage;
         this.blend = blend; // either the predominant grape varietal in the blend or the name of the pre-defined blend (Red Bordeaux, Burgundy...)
@@ -40,6 +40,8 @@ module.exports = class Label {
         this.criticsScore = criticsScore;
         this.communityScore = communityScore;
         this.foodPairing = foodPairing;
+        this.sourceName = sourceName;
+        this.sourceID = sourceID;
 
     }
 
@@ -312,7 +314,9 @@ module.exports = class Label {
             averagePrice: ( this.averagePrice ? this.averagePrice : '' ),
             criticsScore: ( this.criticsScore ? this.criticsScore : '' ),
             communityScore: ( this.communityScore ? this.communityScore : '' ),
-            foodPairing: ( this.foodPairing ? this.foodPairing : '' )
+            foodPairing: ( this.foodPairing ? this.foodPairing : '' ),
+            sourceName: ( this.sourceName ? this.sourceName : '' ),
+            sourceID: ( this.sourceID ? this.sourceID : '' )
         };
     }
 }

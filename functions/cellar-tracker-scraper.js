@@ -49,10 +49,32 @@ module.exports = class CellarTrackerScraper {
                 this.reject( );
             }
             
+        }).then( labelList => this.resolve( labelList ) ).catch( err => {
+            console.log( `error waiting in wineLabelQuery: ${err}`);
         });
 
         return new Promise((resolve, reject) => {this.resolve = resolve; this.reject = reject;} );
 
+    }
+    
+    mapEachResult( dom, cookieJar ){
+        const { window } = dom.window;
+        const $ = require( 'jquery' )(window);
+        var labelList = [];
+
+        console.log( cookieJar.toJSON() );
+
+        var results = this.getSearchResults( $ );
+        var labelPromiseList = results.map((index, link) => {
+            return this.getWineLabelDetail( link, cookieJar ).then( label => labelList.push( label )).catch( err => {
+                console.log( `map error ${err}`);
+            });
+        });
+        
+        return Promise.all( labelPromiseList ).then( () => this.resolve( labelList )).catch( err => {
+            console.log( `error waiting for all mapping promises to resolve: ${err}`);
+        });
+        
     }
     
     getWineLabelDetail( getUri, cookieJar ){
@@ -61,7 +83,7 @@ module.exports = class CellarTrackerScraper {
 
         var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "dangerously" });
 
-        jsDomPromise.then( dom => this.queryPromiseFulfilled( dom, cookieJar ) ).catch(err => {
+        return jsDomPromise.then( dom => this.scrapeWineDetail( dom ) ).catch(err => {
             if ( err.statusCode === 403 ){
                 console.log( 'CAUGHT!' );
                 this.resolve( [] );
@@ -73,149 +95,116 @@ module.exports = class CellarTrackerScraper {
             
         });
 
-        return new Promise((resolve, reject) => {this.resolve = resolve; this.reject = reject;} );
-
     }
 
-    mapEachResult( dom, cookieJar ){
-        const { window } = dom.window;
-        const $ = require( 'jquery' )(window);
-
-        console.log( cookieJar.toJSON() );
-
-        var results = this.getSearchResults( $ );
-        results.map((index, link) => {
-            this.getWineLabelDetail( link, cookieJar );
-        });
-
-        this.resolve(dom.window.document.body.innerHTML );
-    }
-
-    queryPromiseFulfilled( dom ) { 
+    scrapeWineDetail( dom ) { 
         const { window } = dom.window;
         const $ = require( 'jquery' )(window);
         var wine = {};
+        var label;
+
+        wine.sourceName = 'CellarTracker';
+        wine.sourceID = /iWine=\d{1,9}/.exec( dom.window.document.documentURI )[ 0 ];
         wine.varietal = this.getGrape( $ );
         wine.producer = this.getProducer( $ );
 
-        console.log( wine );
-
-        wine.locale = this.getRegion( $ );
-        wine.locale.appellation = this.getAppellation( $ );
+        wine.locale = this.getLocale( $ );
         wine.vintage = this.getVintage( $ );
         wine.labelName = this.getLabelName( $ );
+
+        console.log( wine );
 
         if ( wine.labelName ){
             wine.imageUrl = this.getLabelImageUrl( $ );
             wine.criticsScore = this.getCriticScore( $ );
             wine.style = this.getStyle( $ );
             wine.averagePrice = this.getAveragePrice( $ );
-            wine.communityScore = 0;
+            wine.communityScore = this.getCommunityScore( $ );
             wine.foodPairing = this.getFoodPairing( $ );
             wine.attribution = window.location.href;
     
             //console.log( wine );
     
-            this.label = this.createLabel( wine );
+            label = this.createLabel( wine );
         }
         else{
-            this.label = new Label();
+            label = new Label();
         }
     
-        this.resolve( [this.label] );
+        return label;
     }
 
     getSearchResults( $ ){
         return $("a.more");
     }
 
-    getSearchResultURI( $ ){
-        return $("a.more").attr("href");
-    }
-
-
     getProducer( $ ){        
-        return $("span.icon-producer" ).next().children("a").text();
+        return $("#section_tools > ul.breadcrumb > li:nth-child(2) > div > a > span" ).text();
     }
 
     getGrape( $ ){
-        return $("span.el.var" ).first().text();
-    }
-
-    getAppellation( $ ){
-        return $("span.icon-region" ).next().children("a").first().text();
-    }
-
-    getRegion( $ ){
-        var regionSelector = $("span.icon-region" ).next().children("a").nextAll();
-        return this.separateRegion( regionSelector );
-    }
-
-    getTopHeaderName( $ ){
+        return $("#wine_copy_inner > h2 > a" ).text();
         
-        return $("#top_header" ).children("[itemprop='name']").text();
     }
 
-    parseTopHeaderName( $ ){
+    getLocale( $ ){
+        var locale = {};
+        locale.country = $("#wine_copy_inner > ul > li:nth-child(1) > a").text();
+        locale.region = $("#wine_copy_inner > ul > li:nth-child(2) > a").text();
+        locale.subRegion = $("#wine_copy_inner > ul > li:nth-child(3) > a").text();
+        locale.appellation = $("#wine_copy_inner > ul > li:nth-child(4) > a").text();
+
+        return locale
+    }
+
+    getVintageAndLabelName( $ ){
+        return $("#wine_copy_inner > h1" ).text();
+    }
+
+    separateLabelNameAndVintage( $ ){
         // 1: Vintage
         // 2: Label Name
-        return /(\d{4}|NV)\s([\w\s-&'.]*),/.exec( this.getTopHeaderName( $ ) );
+        return /(\d{4}|NV)\s([\w\s-&'.]*)/.exec( this.getVintageAndLabelName( $ ) );
     }
 
     getVintage( $ ){
 
-        return this.parseTopHeaderName( $ ) ? this.parseTopHeaderName( $ )[ 1 ] : '';
+        return this.separateLabelNameAndVintage( $ ) ? this.separateLabelNameAndVintage( $ )[ 1 ] : '';
     }
 
     getLabelName( $ ){
-        return this.parseTopHeaderName( $ ) ? this.parseTopHeaderName( $ )[ 2 ] : '';
+        return this.separateLabelNameAndVintage( $ ) ? this.separateLabelNameAndVintage( $ )[ 2 ] : '';
     }
 
     getLabelImageUrl( $ ){
-        return $( "#imgThumb" ).attr("src");
+        return $( "#label_photo > img" ).attr("src");
     }
 
     getCriticScore( $ ){
-        return $("span[itemprop='ratingValue']").text();
+        return '';
+    }
+
+    getCommunityScore( $ ){
+        return $("#wine_copy_inner > div.scorebox > span.score > a").text();
     }
 
     getStyle( $ ){
-        return $("a[title='View Wine Style']").text();
+        return '';
     }
 
     getFoodPairing( $ ){
-
-        return $("a[title='View Food Category']").text();
+        return '';
     }
 
     getAveragePrice( $ ){
-        var priceText = $("span.icon-avgp").next().children("b").text();
+        var priceText = $("#where_to_buy_container > div.col_1of2 > a > div.price").text();
+        console.log ( `Price: ${priceText}`);
         return priceText.replace(/\s/g,'');
-    }
-
-    separateRegion( regionSelector ){
-        var splitRegion = {};
-        var regionParts = regionSelector.text().split( ",");
-        console.log( regionParts );
-        var index = regionParts.length - 1;
-
-        splitRegion.country = regionParts[ index-- ];
-        
-        if ( index >= 0 ){
-            splitRegion.region = regionParts[ index-- ];
-        }
-
-        if ( index > 0 ){
-            splitRegion.subRegion = regionParts[ index-- ];
-        }
-
-        
-        return splitRegion;
     }
 
     createLabel( wine ){
         
-        var label = new Label( wine.vintage, wine.varietal, wine.producer, wine.labelName, '', wine.imageUrl, wine.locale.country, wine.locale.region, wine.locale.subRegion, wine.locale.appellation,'', wine.style, wine.averagePrice, wine.criticsScore, wine.communityScore, wine.foodPairing );
+        var label = new Label( wine.vintage, wine.varietal, wine.producer, wine.labelName, '', wine.imageUrl, wine.locale.country, wine.locale.region, wine.locale.subRegion, wine.locale.appellation,'', wine.style, wine.averagePrice, wine.criticsScore, wine.communityScore, wine.foodPairing, wine.sourceName, wine.sourceID );
     
         return label;
     }
