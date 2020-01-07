@@ -27,29 +27,31 @@ const Label = require('./label.js');
 module.exports = class CellarTrackerScraper {
 
     constructor ( ){
-        this.url = 'https://www.cellartracker.com/list.asp';
+        this.url = 'https://www.cellartracker.com/m/wines/search';
     }
     
     wineLabelQuery( queryString ){
-        const cookieJar = new jsdom.CookieJar();
+        const cookieJar = new jsdom.CookieJar( null, { looseMode: true, rejectPublicSuffixes: false});
 
-        var getUri = `${this.url}?szSearch=${queryString}`;
+        var getUri = `${this.url}?q=${queryString}`;
         
         console.log( `Cellar-Tracker uri: ${getUri}`);
 
-        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "dangerously" });
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "outside-only" } );
 
-        jsDomPromise.then( dom => this.mapEachResult( dom, cookieJar ) ).catch(err => {
+        var mapResultPromise = jsDomPromise.then( dom => this.mapEachResult( dom, cookieJar ) ).catch(err => {
             if ( err.statusCode === 403 ){
                 console.log( 'Cellar Tracker returned a 403 from search.' );
                 this.resolve( [] );
             }
             else{
-                console.log('Error scraping cellar tracker', err );
-                this.reject( );
+                console.log('Error scraping cellar tracker', err.message );
+                this.reject( new Error(`Error searching for ${queryString}`) );
             }
             
-        }).then( labelList => this.resolve( labelList ) ).catch( err => {
+        });
+        
+        mapResultPromise.then( labelList => this.resolve( labelList ) ).catch( err => {
             console.log( `error waiting in wineLabelQuery: ${err}`);
         });
 
@@ -61,20 +63,27 @@ module.exports = class CellarTrackerScraper {
         const { window } = dom.window;
         const $ = require( 'jquery' )(window);
         var labelList = [];
-
+ 
         console.log( cookieJar.toJSON() );
-
-        var results = this.getSearchResults( $ );
-        var labelPromiseList = results.map((index, link) => {
-            return this.getWineLabelDetail( link, cookieJar ).then( label => labelList.push( label )).catch( err => {
-                console.log( `map error ${err}`);
-            });
-        });
         
-        return Promise.all( labelPromiseList ).then( () => this.resolve( labelList )).catch( err => {
-            console.log( `error waiting for all mapping promises to resolve: ${err}`);
+        return new Promise( (resolve, reject) => {
+            var results = this.getSearchResults( $ );
+            
+            if ( results.length > 0 ){
+       
+                var labelPromiseList = results.map((index, link) => {
+                    return this.getWineLabelDetail( link, cookieJar ).then( label => labelList.push( label )).catch( err => {
+                        console.log( `map error ${err.message}`);
+                    });
+                });
+                
+                resolve ( Promise.all( labelPromiseList ).then( labelList => resolve( labelList )) );
+            }
+            else{
+                reject( new Error( 'No results') );
+            }
         });
-        
+         
     }
     
     getWineLabelDetail( getUri, cookieJar ){
@@ -104,7 +113,7 @@ module.exports = class CellarTrackerScraper {
         var label;
 
         wine.sourceName = 'CellarTracker';
-        wine.sourceID = /iWine=\d{1,9}/.exec( dom.window.document.documentURI )[ 0 ];
+        wine.sourceID = this.getWineId( $ );
         wine.varietal = this.getGrape( $ );
         wine.producer = this.getProducer( $ );
 
@@ -135,7 +144,11 @@ module.exports = class CellarTrackerScraper {
     }
 
     getSearchResults( $ ){
-        return $("a.more");
+        return $("div.wine-result-data > a.target-link");
+    }
+
+    getWineId ( $ ){
+        return $("div.wine-result-data > a.wine-button").attr("data-wineid");
     }
 
     getProducer( $ ){        
