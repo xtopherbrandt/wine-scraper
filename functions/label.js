@@ -23,7 +23,7 @@ const uuidv4 = require('uuid/v4');
 //const ResponseFormatter = require( './responseFormatter');
 
 module.exports = class Label {
-    constructor( vintage, blend, producer, labelName, proprietaryName, imageUrl, country, region, subRegion, appellation, key, style, averagePrice, criticsScore, communityScore, foodPairing, sourceName, sourceID ){
+    constructor( vintage, blend, producer, labelName, proprietaryName, imageUrl, country, region, subRegion, appellation, vineyard, key, style, averagePrice, criticsScore, communityScore, foodPairing, sourceName, sourceID ){
         this.key = key
         this.vintage = vintage;
         this.blend = blend; // either the predominant grape varietal in the blend or the name of the pre-defined blend (Red Bordeaux, Burgundy...)
@@ -35,6 +35,7 @@ module.exports = class Label {
         this.region = region;
         this.subRegion = subRegion;
         this.appellation = appellation;
+        this.vineyard = vineyard;
         this.style = style;
         this.averagePrice = averagePrice;
         this.criticsScore = criticsScore;
