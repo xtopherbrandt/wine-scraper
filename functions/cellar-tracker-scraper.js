@@ -241,7 +241,7 @@ module.exports = class CellarTrackerScraper {
 
     createLabel( wine ){
         
-        var label = new Label( wine.vintage, wine.varietal, wine.producer, wine.labelName, wine.designation, wine.imageUrl, wine.locale.country, wine.locale.region, wine.locale.subRegion, wine.locale.appellation, vineyard, '', wine.style, wine.averagePrice, wine.criticsScore, wine.communityScore, wine.foodPairing, wine.sourceName, wine.sourceID );
+        var label = new Label( wine.vintage, wine.varietal, wine.producer, wine.labelName, wine.designation, wine.imageUrl, wine.locale.country, wine.locale.region, wine.locale.subRegion, wine.locale.appellation, wine.vineyard, '', wine.style, wine.averagePrice, wine.criticsScore, wine.communityScore, wine.foodPairing, wine.sourceName, wine.sourceID );
     
         return label;
     }
