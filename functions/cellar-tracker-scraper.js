@@ -38,7 +38,7 @@ module.exports = class CellarTrackerScraper {
         
         console.log( `Cellar-Tracker uri: ${getUri}`);
 
-        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "outside-only" } );
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (Linux; Android 8.0.0;) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.116 Mobile Safari/537.36', cookieJar, resources: "usable", runScripts: "outside-only" } );
 
         var mapResultPromise = jsDomPromise.then( dom => this.mapEachResult( dom, cookieJar ) ).catch(err => {
             if ( err.statusCode === 403 ){
@@ -77,7 +77,6 @@ module.exports = class CellarTrackerScraper {
                             console.log( `map error ${err.message}`);
                         });
                     }
-
                 });
                 
                 resolve ( Promise.all( labelPromiseList ) );
@@ -94,7 +93,7 @@ module.exports = class CellarTrackerScraper {
         
         console.log( `Wine uri: ${getUri}`);
 
-        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (win32) AppleWebKit/537.36 (KHTML, like Gecko)', cookieJar, resources: "usable", runScripts: "outside-only" });
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (Linux; Android 8.0.0;) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.116 Mobile Safari/537.36', cookieJar, resources: "usable", runScripts: "outside-only" });
 
         return jsDomPromise.then( dom => this.scrapeWineDetail( dom ) ).catch(err => {
             if ( err.statusCode === 403 ){
@@ -224,7 +223,7 @@ module.exports = class CellarTrackerScraper {
     getFoodPairing( $ ){
         var foodPairingCommunityRecommendations = this.getFoodPairingCommunityRecommendations( $ );
         if ( foodPairingCommunityRecommendations ){
-            var foodPairing = /\n\t\t\tCommunity Recommendations\n\t\t\t\s([\s\w\,]+)\n\t\t/.exec( foodPairingCommunityRecommendations );
+            var foodPairing = /\n\t\t\tCommunity Recommendations\n\t\t\t\s([\s\w,]+)\n\t\t/.exec( foodPairingCommunityRecommendations );
             if ( foodPairing ){
                 console.log( foodPairing );
                 return foodPairing[1];
