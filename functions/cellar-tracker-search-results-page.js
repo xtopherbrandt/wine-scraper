@@ -41,6 +41,7 @@ module.exports = class CellarTrackerSearchResultsPage {
         wineInfo.vintage = this.getVintage( element );
         wineInfo.labelName = this.getLabelName( element );
         wineInfo.style = this.getStyle( element );
+        wineInfo.vintageAndName = this.getVintageAndLabelName( element );
 
         wineInfo.attribution = this.dom.window.location.href;
 
@@ -49,7 +50,7 @@ module.exports = class CellarTrackerSearchResultsPage {
     }
 
     parseSearchResults (){
-        this.$("div.wine-result").each( (i, element) => this.getWineDetail( element ));
+        this.$("div.wine-result").each( (i, element) => { if (i < 30) {this.getWineDetail( element )} });
     }
 
     getWineDetailLink ( element ){
