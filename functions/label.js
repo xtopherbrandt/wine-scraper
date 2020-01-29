@@ -303,7 +303,7 @@ module.exports = class Label {
             rowKey: this.key,
             vintage: ( this.vintage ? this.vintage : '' ),
             blend: ( this.blend ? this.blend : '' ), // either the predominant grape varietal in the blend or the name of the pre-defined blend (Red Bordeaux, Burgundy...)
-            partitionKey: ( this.producer ? this.producer : '' ),
+            producer: ( this.producer ? this.producer : '' ),
             labelName: ( this.labelName ? this.labelName : '' ),
             proprietaryName: ( this.proprietaryName ? this.proprietaryName : '' ),
             imageUrl: ( this.imageUrl ? this.imageUrl : '' ),
