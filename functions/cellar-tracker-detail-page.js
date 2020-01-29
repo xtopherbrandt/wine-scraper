@@ -63,7 +63,7 @@ module.exports = class CellarTrackerDetailPage {
             label = new Label();
         }
     
-        return label;
+        return [label];
     }
 
     getWineId ( ){
