@@ -37,6 +37,7 @@ app.use(cors({ origin: true }));
 // build multiple CRUD interfaces:
 //app.get('/:id', (req, res) => res.send(Widgets.getById(req.params.id)));
 app.get('/', (req, res) => getFromCellarTracker( req, res ));
+app.get('/detail', (req, res) => getFromCellarTrackerByUri( req, res ));
 
 function getFromWineSearcher( req, res ){
 
@@ -112,6 +113,38 @@ function startCellarTrackerQuery( vintage, bottleName ){
     return cellarTrackerScraper.wineLabelQuery( labelQuery );
 
 }
+
+function getFromCellarTrackerByUri( req, res ){
+
+    var uri = req.query.uri;
+
+    startCellarTrackerGet( uri ).then( labels => {
+        console.log( `   Found ${labels.length} labels`);
+        var responseText = `Found ${labels.length} labels`
+        res.send( labels );
+        return responseText;
+    },reason => {
+        console.log ( `Look up failed` );
+        console.log( reason );
+        var responseText = `Sorry, I couldn't load ${uri}`
+        res.send( responseText );
+    }).catch( error => {
+        console.log ( `Look up error` );
+        console.log( error );
+        var responseText = `Sorry, I couldn't load ${uri}`
+        res.send( responseText );
+    });
+}
+
+function startCellarTrackerGet( uri ){
+    var cellarTrackerScraper = new CellarTrackerScraper();
+   
+    console.log( `Fetching: ${uri}` );
+
+    return cellarTrackerScraper.wineDetailGet( uri );
+
+}
+
 
 function getFromVivino( req, res ){
 

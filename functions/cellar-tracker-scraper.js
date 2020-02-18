@@ -58,6 +58,28 @@ module.exports = class CellarTrackerScraper {
 
     }
     
+    wineDetailGet( getUri ){
+        const cookieJar = new jsdom.CookieJar( null, { looseMode: true, rejectPublicSuffixes: false});
+        
+        console.log( `Cellar-Tracker uri: ${getUri}`);
+        
+        var jsDomPromise = JSDOM.fromURL( getUri, { pretendToBeVisual: true, userAgent: 'Mozilla/5.0 (Linux; Android 8.0.0;) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.116 Mobile Safari/537.36', cookieJar, resources: "usable", runScripts: "outside-only" } );
+
+        jsDomPromise.then( dom => this.resolve( this.mapEachResult( dom, cookieJar )) ).catch(err => {
+            if ( err.statusCode === 403 ){
+                console.log( 'Cellar Tracker returned a 403 from search.' );
+                this.resolve( [] );
+            }
+            else{
+                console.log('Error scraping cellar tracker', err.message );
+                this.reject( new Error(`Error loading ${getUri}`) );
+            }
+            
+        });
+
+        return new Promise((resolve, reject) => {this.resolve = resolve; this.reject = reject;} );
+    }
+
     mapEachResult( dom, cookieJar ){
         const { window } = dom.window;
         const $ = require( 'jquery' )(window);
